@@ -1,0 +1,126 @@
+issuer: HAPAG LLOYD
+extractor:
+  pdf: "xpdf"
+sections:
+  - section:
+      start:
+        pattern: "Marks and Nos.\\s+|\tNumber"
+      end:
+        pattern: "Shipper’s declared Value"
+      encapsulate_key: material
+      lines:
+        start:
+          pattern: \t
+        end:
+          pattern: \t
+          last_index: true
+        merge:
+          string: \n
+      patterns:
+        - "%{GREEDYDATA:material}"
+  - section:
+      start:
+        from_end_index: -1
+        inclusive: true
+      end:
+        pattern: "SEAL:	"
+      patterns:
+        - "%{DATA}(?:\t)%{NUMBER:containerNo} "
+      encapsulate_key: containers
+  - section:
+      start:
+        pattern: "^	Port of Loading"
+      patterns:
+        - "%{GREEDYDATA:portOfLoading}"
+      end:
+        pattern: "^	Port of Discharge"
+      encapsulate_key: portOfLoading
+      lines:
+        start:
+          pattern: \t
+  - section:
+      start:
+        pattern: "^	Port of Discharge"
+      patterns:
+        - "%{GREEDYDATA:portOfDischarge}"
+      end:
+        pattern: "^	Container Nos."
+      encapsulate_key: portOfDischarge
+      lines:
+        start:
+          pattern: \t
+  - section:
+      start:
+        pattern: "^	Vessel"
+      patterns:
+        - "%{DATA:vessel}(?:\t)%{DATA:voyageNo}%{SPACE}Place of Delivery:"
+      end:
+        pattern: "^	Port of Loading:"
+      encapsulate_key: vesselNVoyage
+      lines:
+        start:
+          pattern: \t
+  - section:
+      start:
+        pattern: "Carrier’s Reference"
+      patterns:
+        - "%{NUMBER:carrierRef}%{SPACE}%{WORD:billOfLadingNo}%{SPACE}%{GREEDYDATA}"
+      end:
+        pattern: "^	Export References"
+      encapsulate_key: billOfLading
+      lines:
+        start:
+          pattern: \t
+  - section:
+      start:
+        pattern: "Shipper:"
+      patterns:
+        - "%{GREEDYDATA:shipper}"
+      end:
+        pattern: "Export References:"
+      encapsulate_key: shipper
+      lines:
+        merge:
+          string: \n
+        start:
+          pattern: \t
+        end:
+          pattern: "Carrier"
+  - section:
+      start:
+        pattern: "^	Consignee"
+      patterns:
+        - "%{GREEDYDATA:consignee}"
+      end:
+        pattern: "^	Notify Address"
+      encapsulate_key: consignee
+      lines:
+        merge:
+          string: \n
+        start:
+          pattern: \t
+        end:
+          pattern: "Forwarding"
+  - section:
+      start:
+        pattern: "^	Notify Address"
+        skip_lines: 1
+      patterns:
+        - "%{GREEDYDATA:notifyParty}"
+      end:
+        pattern: "^	Vessel"
+      encapsulate_key: notifyParty
+      lines:
+        merge:
+          string: \n
+        start:
+          pattern: \t
+patterns:
+  - "%{NUMBER:grossWeight}%{SPACE}KG NETT"
+  - "^	Carrier:%{DATA:carrier}(?:\t)"
+  - "(?:\t)%{NUMBER:qty} PIECES"
+  - "MARKS & NOS:(?:\t)%{DATA}(?:\t)%{DATA}(?:(?:\t)|(?:\\s+))%{GREEDYDATA:volume}"
+  - "^FREIGHT%{GREEDYDATA:freightInstruction}"
+  - "DATE%{SPACE}:%{GREEDYDATA:etd}"
+ignore_duplicate:
+  - material
